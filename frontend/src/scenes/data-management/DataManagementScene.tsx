@@ -69,7 +69,7 @@ const openCreateEventDialog = (): void => {
                 eventDefinitionsTableLogic.findMounted()?.actions.loadEventDefinitions()
                 router.actions.push(urls.eventDefinition(newEvent.id))
             } catch (error: any) {
-                lemonToast.error(error.message)
+                lemonToast.error(error.detail || error.message)
             }
         },
     })

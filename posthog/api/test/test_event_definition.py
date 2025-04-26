@@ -229,3 +229,71 @@ def create_event_definitions(event_definition: dict, team_id: int) -> EventDefin
     created_definition = EventDefinition.objects.create(name=event_definition["name"], team_id=team_id)
 
     return created_definition
+
+
+class TestEventDefinitionCreation(APIBaseTest):
+    def test_create_event_definition(self):
+        response = self.client.post(
+            f"/api/projects/{self.team.pk}/event_definitions/",
+            {"name": "test_event"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["name"], "test_event")
+        self.assertTrue(EventDefinition.objects.filter(name="test_event", team=self.team).exists())
+
+    def test_create_event_definition_duplicate_name(self):
+        # Create first event definition
+        EventDefinition.objects.create(team=self.team, name="test_event")
+
+        # Try to create another with the same name
+        response = self.client.post(
+            f"/api/projects/{self.team.pk}/event_definitions/",
+            {"name": "test_event"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), {"name": ["There is already an event with this name."]})
+
+    def test_create_event_definition_invalid_name(self):
+        response = self.client.post(
+            f"/api/projects/{self.team.pk}/event_definitions/",
+            {"name": ""},  # Empty name
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertTrue("name" in response.json())
+
+    def test_create_event_definition_activity_log(self):
+        response = self.client.post(
+            f"/api/projects/{self.team.pk}/event_definitions/",
+            {"name": "test_event"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        activity_log = ActivityLog.objects.first()
+        assert activity_log is not None
+        assert activity_log.activity == "created"
+        assert activity_log.item_id == str(response.json()["id"])
+        assert activity_log.scope == "EventDefinition"
+        assert activity_log.detail["name"] == "test_event"
+
+    @patch("posthoganalytics.capture")
+    def test_create_event_definition_analytics(self, mock_capture):
+        response = self.client.post(
+            f"/api/projects/{self.team.pk}/event_definitions/",
+            {"name": "test_event"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        mock_capture.assert_called_once_with(
+            self.user.distinct_id,
+            "event definition created",
+            {
+                "team_id": self.team.id,
+                "event_definition_id": response.json()["id"],
+                "name": "test_event",
+            },
+            groups={
+                "instance": ANY,
+                "organization": str(self.organization.id),
+                "project": str(self.team.uuid),
+            },
+        )
