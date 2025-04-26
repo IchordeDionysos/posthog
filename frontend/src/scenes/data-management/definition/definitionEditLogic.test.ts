@@ -9,6 +9,7 @@ import { urls } from 'scenes/urls'
 import { useMocks } from '~/mocks/jest'
 import { initKeaTests } from '~/test/init'
 import { mockEventDefinitions, mockEventPropertyDefinition } from '~/test/mocks'
+import { PropertyType } from '~/types'
 
 describe('definitionEditLogic', () => {
     let logic: ReturnType<typeof definitionEditLogic.build>
@@ -48,6 +49,23 @@ describe('definitionEditLogic', () => {
             'saveDefinition',
             'setDefinition',
             eventDefinitionsTableLogic.actionCreators.setLocalEventDefinition(mockEventDefinitions[0]),
+        ])
+    })
+
+    it('save property definition with enum values', async () => {
+        const enumPropertyDefinition = {
+            ...mockEventPropertyDefinition,
+            property_type: PropertyType.Enum,
+            property_type_enum: ['value1', 'value2', 'value3'],
+        }
+
+        router.actions.push(urls.propertyDefinition('1'))
+        await expectLogic(logic, () => {
+            logic.actions.saveDefinition(enumPropertyDefinition)
+        }).toDispatchActionsInAnyOrder([
+            'saveDefinition',
+            'setDefinition',
+            propertyDefinitionsTableLogic.actionCreators.setLocalPropertyDefinition(enumPropertyDefinition),
         ])
     })
 })
