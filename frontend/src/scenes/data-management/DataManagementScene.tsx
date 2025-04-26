@@ -1,12 +1,18 @@
 import { IconInfo } from '@posthog/icons'
 import { actions, connect, kea, path, reducers, selectors, useActions, useValues } from 'kea'
 import { actionToUrl, combineUrl, router, urlToAction } from 'kea-router'
+import api from 'lib/api'
 import { ActivityLog } from 'lib/components/ActivityLog/ActivityLog'
 import { PageHeader } from 'lib/components/PageHeader'
 import { TitleWithIcon } from 'lib/components/TitleWithIcon'
 import { FEATURE_FLAGS, FeatureFlagKey } from 'lib/constants'
+import { LemonButton } from 'lib/lemon-ui/LemonButton'
+import { LemonDialog } from 'lib/lemon-ui/LemonDialog'
+import { LemonField } from 'lib/lemon-ui/LemonField'
+import { LemonInput } from 'lib/lemon-ui/LemonInput'
 import { LemonTab, LemonTabs } from 'lib/lemon-ui/LemonTabs'
 import { LemonTag } from 'lib/lemon-ui/LemonTag'
+import { lemonToast } from 'lib/lemon-ui/LemonToast/LemonToast'
 import { Tooltip } from 'lib/lemon-ui/Tooltip'
 import { featureFlagLogic } from 'lib/logic/featureFlagLogic'
 import { capitalizeFirstLetter } from 'lib/utils'
@@ -23,6 +29,7 @@ import { ActivityScope, Breadcrumb } from '~/types'
 import { ActionsTable } from './actions/ActionsTable'
 import type { dataManagementSceneLogicType } from './DataManagementSceneType'
 import { EventDefinitionsTable } from './events/EventDefinitionsTable'
+import { eventDefinitionsTableLogic } from './events/eventDefinitionsTableLogic'
 import { IngestionWarningsView } from './ingestion-warnings/IngestionWarningsView'
 import { PropertyDefinitionsTable } from './properties/PropertyDefinitionsTable'
 
@@ -35,6 +42,39 @@ export enum DataManagementTab {
     IngestionWarnings = 'warnings',
     Revenue = 'revenue',
 }
+
+const openCreateEventDialog = (): void => {
+    LemonDialog.openForm({
+        title: 'Create new event',
+        description: 'Enter a name for your new event',
+        initialValues: { name: '' },
+        content: (
+            <LemonField name="name" label="Event name">
+                <LemonInput placeholder="Enter event name" autoFocus />
+            </LemonField>
+        ),
+        errors: {
+            name: (value) => (!value ? 'Please enter an event name' : undefined),
+        },
+        onSubmit: async ({ name }) => {
+            try {
+                const newEvent = await api.eventDefinitions.create({
+                    eventDefinitionData: {
+                        name,
+                        verified: false,
+                        hidden: false,
+                    },
+                })
+                lemonToast.success('Event created')
+                eventDefinitionsTableLogic.findMounted()?.actions.loadEventDefinitions()
+                router.actions.push(urls.eventDefinition(newEvent.id))
+            } catch (error: any) {
+                lemonToast.error(error.message)
+            }
+        },
+    })
+}
+
 const tabs: Record<
     DataManagementTab,
     {
@@ -50,6 +90,11 @@ const tabs: Record<
         url: urls.eventDefinitions(),
         label: 'Events',
         content: <EventDefinitionsTable />,
+        buttons: (
+            <LemonButton type="primary" onClick={openCreateEventDialog} data-attr="create-event-definition">
+                Create Event
+            </LemonButton>
+        ),
         tooltipDocLink: 'https://posthog.com/docs/data/events',
     },
     [DataManagementTab.Actions]: {
