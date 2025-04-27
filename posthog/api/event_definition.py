@@ -51,25 +51,16 @@ class EventDefinitionSerializer(TaggedItemSerializerMixin, serializers.ModelSeri
     def validate(self, data):
         validated_data = super().validate(data)
 
+        # Explicitly check for blank or missing name
+        name = validated_data.get("name")
+        if name is None or name.strip() == "":
+            raise serializers.ValidationError({"name": ["This field may not be blank."]})
+
         if "hidden" in validated_data and "verified" in validated_data:
             if validated_data["hidden"] and validated_data["verified"]:
                 raise serializers.ValidationError("An event cannot be both hidden and verified")
 
         return validated_data
-
-    def validate_name(self, value):
-        exclude_kwargs = {}
-        if self.instance:
-            exclude_kwargs = {"pk": self.instance.pk}
-
-        if (
-            EventDefinition.objects.filter(name=value, project=self.context["project_id"])
-            .exclude(**exclude_kwargs)
-            .exists()
-        ):
-            raise serializers.ValidationError("There is already an event with this name.", code="unique")
-
-        return value
 
     def update(self, event_definition: EventDefinition, validated_data):
         raise EnterpriseFeatureException()
@@ -96,45 +87,6 @@ class EventDefinitionViewSet(
 
     search_fields = ["name"]
     ordering_fields = ["name", "last_seen_at"]
-
-    def create(self, request: request.Request, *args: Any, **kwargs: Any) -> response.Response:
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        # Create the event definition
-        event_definition = EventDefinition.objects.create(
-            team=self.team,
-            project=self.project,
-            name=serializer.validated_data["name"],
-        )
-
-        # Log the activity
-        log_activity(
-            organization_id=self.organization.id,
-            team_id=self.team.id,
-            user=request.user,
-            item_id=event_definition.id,
-            scope="EventDefinition",
-            activity="created",
-            detail=Detail(name=event_definition.name),
-            was_impersonated=is_impersonated_session(request),
-        )
-
-        # Report usage
-        report_user_action(
-            request.user,
-            "event definition created",
-            {
-                "team_id": self.team.id,
-                "event_definition_id": event_definition.id,
-                "name": event_definition.name,
-            },
-        )
-
-        return response.Response(
-            self.get_serializer(event_definition).data,
-            status=status.HTTP_201_CREATED,
-        )
 
     def dangerously_get_queryset(self):
         # `type` = 'all' | 'event' | 'action_event'

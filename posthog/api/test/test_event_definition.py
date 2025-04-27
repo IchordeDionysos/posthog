@@ -251,7 +251,15 @@ class TestEventDefinitionCreation(APIBaseTest):
             {"name": "test_event"},
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json(), {"name": ["There is already an event with this name."]})
+        self.assertEqual(
+            response.json(),
+            {
+                "type": "validation_error",
+                "code": "invalid_input",
+                "detail": "There is already an event with this name.",
+                "attr": "name",
+            },
+        )
 
     def test_create_event_definition_invalid_name(self):
         response = self.client.post(
@@ -259,7 +267,15 @@ class TestEventDefinitionCreation(APIBaseTest):
             {"name": ""},  # Empty name
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertTrue("name" in response.json())
+        self.assertEqual(
+            response.json(),
+            {
+                "type": "validation_error",
+                "code": "blank",
+                "detail": "This field may not be blank.",
+                "attr": "name",
+            },
+        )
 
     def test_create_event_definition_activity_log(self):
         response = self.client.post(
@@ -294,6 +310,5 @@ class TestEventDefinitionCreation(APIBaseTest):
             groups={
                 "instance": ANY,
                 "organization": str(self.organization.id),
-                "project": str(self.team.uuid),
             },
         )
