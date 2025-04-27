@@ -27,7 +27,7 @@ class EnterpriseEventDefinitionSerializer(TaggedItemSerializerMixin, serializers
     is_calculating = serializers.BooleanField(read_only=True)
     last_calculated_at = serializers.DateTimeField(read_only=True)
     last_updated_at = serializers.DateTimeField(read_only=True)
-    post_to_slack = serializers.BooleanField(required=False)
+    post_to_slack = serializers.BooleanField(default=False)
     default_columns = serializers.ListField(child=serializers.CharField(), required=False)
 
     class Meta:
