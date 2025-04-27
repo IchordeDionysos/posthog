@@ -83,8 +83,10 @@ class EnterpriseEventDefinitionSerializer(TaggedItemSerializerMixin, serializers
         return validated_data
 
     def validate_name(self, value):
+        # If updating and name is unchanged, skip duplicate check
+        if self.instance and self.instance.name == value:
+            return value
         team_id = self.context["team_id"]
-
         # Check both base and enterprise tables for duplicates
         if (
             EventDefinition.objects.filter(name=value, team_id=team_id).exists()
