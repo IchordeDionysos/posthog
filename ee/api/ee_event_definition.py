@@ -55,6 +55,7 @@ class EnterpriseEventDefinitionSerializer(TaggedItemSerializerMixin, serializers
             "created_by",
             "post_to_slack",
             "default_columns",
+            "required_properties",
         )
         read_only_fields = [
             "id",

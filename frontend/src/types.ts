@@ -3450,6 +3450,7 @@ export interface EventDefinition {
     is_action?: boolean
     hidden?: boolean
     default_columns?: string[]
+    required_properties?: string[]
 }
 
 // TODO duplicated from plugin server. Follow-up to de-duplicate

@@ -312,3 +312,52 @@ class TestEventDefinitionCreation(APIBaseTest):
                 "organization": str(self.organization.id),
             },
         )
+
+    def test_create_event_definition_with_required_properties(self):
+        response = self.client.post(
+            f"/api/projects/{self.team.pk}/event_definitions/",
+            {"name": "test_event_with_required_props", "required_properties": ["prop1", "prop2"]},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["name"], "test_event_with_required_props")
+        self.assertEqual(response.json()["required_properties"], ["prop1", "prop2"])
+        ed = EventDefinition.objects.get(name="test_event_with_required_props", team=self.team)
+        self.assertEqual(ed.required_properties, ["prop1", "prop2"])
+
+    def test_create_event_definition_with_empty_required_properties(self):
+        response = self.client.post(
+            f"/api/projects/{self.team.pk}/event_definitions/",
+            {"name": "test_event_with_empty_required_props", "required_properties": []},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["required_properties"], [])
+        ed = EventDefinition.objects.get(name="test_event_with_empty_required_props", team=self.team)
+        self.assertEqual(ed.required_properties, [])
+
+    def test_create_event_definition_with_null_required_properties(self):
+        response = self.client.post(
+            f"/api/projects/{self.team.pk}/event_definitions/",
+            {"name": "test_event_with_null_required_props", "required_properties": None},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["required_properties"], None)
+        ed = EventDefinition.objects.get(name="test_event_with_null_required_props", team=self.team)
+        self.assertEqual(ed.required_properties, None)
+
+    def test_retrieve_event_definition_with_required_properties(self):
+        ed = EventDefinition.objects.create(
+            team=self.team, name="test_event_retrieve", required_properties=["foo", "bar"]
+        )
+        response = self.client.get(f"/api/projects/@current/event_definitions/{ed.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["required_properties"], ["foo", "bar"])
+
+    def test_update_event_definition_required_properties(self):
+        ed = EventDefinition.objects.create(team=self.team, name="test_event_update", required_properties=["foo"])
+        response = self.client.patch(
+            f"/api/projects/@current/event_definitions/{ed.id}/",
+            {"required_properties": ["bar", "baz"]},
+        )
+        # Should be forbidden for non-EE, but test the field is present in response
+        self.assertIn("required_properties", response.json())
+        # If you want to test EE, do it in the EE test file
