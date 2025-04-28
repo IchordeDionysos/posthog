@@ -42,7 +42,7 @@ export function EventDefinitionRequiredProperties({ definition }: { definition: 
     }
 
     return (
-        <div className="space-y-4">
+        <div>
             <h3>Required Properties</h3>
             <p>
                 Select the required properties for this event. These properties must be present when the event is sent.

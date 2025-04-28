@@ -68,7 +68,7 @@ export function EventPropertySelector(props: EventPropertySelectorProps): JSX.El
     ]
 
     return (
-        <div>
+        <div className="space-y-4">
             <div className="flex items-center gap-2">
                 <Popover
                     visible={open}
