@@ -30,7 +30,8 @@ describe('definitionEditLogic', () => {
             },
             patch: {
                 '/api/projects/:team/event_definitions/:id': mockEventDefinitions[0],
-                '/api/projects/:team/property_definitions/:id': mockEventPropertyDefinition,
+                // Requires using the outdated body property as the response must be synchronous
+                '/api/projects/:team/property_definitions/:id': (req) => [200, req.body],
             },
         })
         initKeaTests()
@@ -59,6 +60,7 @@ describe('definitionEditLogic', () => {
             property_type_enum: ['value1', 'value2', 'value3'],
         }
 
+        definitionLogic({ id: '1' }).actions.setDefinition(enumPropertyDefinition)
         router.actions.push(urls.propertyDefinition('1'))
         await expectLogic(logic, () => {
             logic.actions.saveDefinition(enumPropertyDefinition)

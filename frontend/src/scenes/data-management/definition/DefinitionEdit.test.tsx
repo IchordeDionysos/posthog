@@ -1,5 +1,11 @@
-import { render } from '@testing-library/react'
+import '@testing-library/jest-dom'
 
+import { render, waitFor } from '@testing-library/react'
+import { featureFlagLogic } from 'lib/logic/featureFlagLogic'
+
+import { breadcrumbsLogic } from '~/layout/navigation/Breadcrumbs/breadcrumbsLogic'
+import { useMocks } from '~/mocks/jest'
+import { initKeaTests } from '~/test/init'
 import { mockEventPropertyDefinition } from '~/test/mocks'
 import { PropertyType } from '~/types'
 
@@ -7,19 +13,29 @@ import { DefinitionEdit } from './DefinitionEdit'
 import { definitionLogic } from './definitionLogic'
 
 describe('DefinitionEdit', () => {
-    it('shows enum input field when property type is Enum', () => {
-        const enumPropertyDefinition = {
-            ...mockEventPropertyDefinition,
-            property_type: PropertyType.Enum,
-            property_type_enum: ['value1', 'value2'],
-        }
+    beforeEach(() => {
+        useMocks({
+            get: {
+                '/api/projects/:team/property_definitions/:id': {
+                    ...mockEventPropertyDefinition,
+                    property_type: PropertyType.Enum,
+                    property_type_enum: ['value1', 'value2'],
+                },
+            },
+        })
+        initKeaTests()
+        breadcrumbsLogic().mount()
+        featureFlagLogic().mount()
+    })
 
-        const { getByLabelText } = render(<DefinitionEdit id="1" />)
-
-        // Mock the definition value in the logic
+    it('shows enum input field when property type is Enum', async () => {
         definitionLogic({ id: '1' }).mount()
-        definitionLogic({ id: '1' }).actions.setDefinition(enumPropertyDefinition)
+        const { getByText } = render(<DefinitionEdit id="1" />)
 
-        expect(getByLabelText('Enum values')).toBeInTheDocument()
+        await waitFor(() => {
+            expect(getByText('Enum values')).toBeInTheDocument()
+            expect(getByText('value1')).toBeInTheDocument()
+            expect(getByText('value2')).toBeInTheDocument()
+        })
     })
 })
