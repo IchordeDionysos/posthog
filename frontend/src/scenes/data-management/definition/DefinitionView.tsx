@@ -26,6 +26,8 @@ import { NodeKind } from '~/queries/schema/schema-general'
 import { getFilterLabel } from '~/taxonomy/helpers'
 import { FilterLogicalOperator, PropertyDefinition, PropertyDefinitionVerificationStatus, ReplayTabs } from '~/types'
 
+import { EventDefinitionRequiredProperties } from '../requiredProperties/EventDefinitionRequiredProperties'
+
 export const scene: SceneExport = {
     component: DefinitionView,
     logic: definitionLogic,
@@ -274,6 +276,8 @@ export function DefinitionView(props: DefinitionLogicProps = {}): JSX.Element {
 
             {isEvent && definition.id !== 'new' && (
                 <>
+                    <EventDefinitionRequiredProperties definition={definition} />
+                    <LemonDivider className="my-6" />
                     <EventDefinitionProperties definition={definition} />
 
                     <LemonDivider className="my-6" />
