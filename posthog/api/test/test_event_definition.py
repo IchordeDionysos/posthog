@@ -229,3 +229,135 @@ def create_event_definitions(event_definition: dict, team_id: int) -> EventDefin
     created_definition = EventDefinition.objects.create(name=event_definition["name"], team_id=team_id)
 
     return created_definition
+
+
+class TestEventDefinitionCreation(APIBaseTest):
+    def test_create_event_definition(self):
+        response = self.client.post(
+            f"/api/projects/{self.team.pk}/event_definitions/",
+            {"name": "test_event"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["name"], "test_event")
+        self.assertTrue(EventDefinition.objects.filter(name="test_event", team=self.team).exists())
+
+    def test_create_event_definition_duplicate_name(self):
+        # Create first event definition
+        EventDefinition.objects.create(team=self.team, name="test_event")
+
+        # Try to create another with the same name
+        response = self.client.post(
+            f"/api/projects/{self.team.pk}/event_definitions/",
+            {"name": "test_event"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {
+                "type": "validation_error",
+                "code": "invalid_input",
+                "detail": "There is already an event with this name.",
+                "attr": "name",
+            },
+        )
+
+    def test_create_event_definition_invalid_name(self):
+        response = self.client.post(
+            f"/api/projects/{self.team.pk}/event_definitions/",
+            {"name": ""},  # Empty name
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json(),
+            {
+                "type": "validation_error",
+                "code": "blank",
+                "detail": "This field may not be blank.",
+                "attr": "name",
+            },
+        )
+
+    def test_create_event_definition_activity_log(self):
+        response = self.client.post(
+            f"/api/projects/{self.team.pk}/event_definitions/",
+            {"name": "test_event"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        activity_log = ActivityLog.objects.first()
+        assert activity_log is not None
+        assert activity_log.activity == "created"
+        assert activity_log.item_id == str(response.json()["id"])
+        assert activity_log.scope == "EventDefinition"
+        assert activity_log.detail["name"] == "test_event"
+
+    @patch("posthoganalytics.capture")
+    def test_create_event_definition_analytics(self, mock_capture):
+        response = self.client.post(
+            f"/api/projects/{self.team.pk}/event_definitions/",
+            {"name": "test_event"},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        mock_capture.assert_called_once_with(
+            self.user.distinct_id,
+            "event definition created",
+            {
+                "team_id": self.team.id,
+                "event_definition_id": response.json()["id"],
+                "name": "test_event",
+            },
+            groups={
+                "instance": ANY,
+                "organization": str(self.organization.id),
+            },
+        )
+
+    def test_create_event_definition_with_required_properties(self):
+        response = self.client.post(
+            f"/api/projects/{self.team.pk}/event_definitions/",
+            {"name": "test_event_with_required_props", "required_properties": ["prop1", "prop2"]},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["name"], "test_event_with_required_props")
+        self.assertEqual(response.json()["required_properties"], ["prop1", "prop2"])
+        ed = EventDefinition.objects.get(name="test_event_with_required_props", team=self.team)
+        self.assertEqual(ed.required_properties, ["prop1", "prop2"])
+
+    def test_create_event_definition_with_empty_required_properties(self):
+        response = self.client.post(
+            f"/api/projects/{self.team.pk}/event_definitions/",
+            {"name": "test_event_with_empty_required_props", "required_properties": []},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["required_properties"], [])
+        ed = EventDefinition.objects.get(name="test_event_with_empty_required_props", team=self.team)
+        self.assertEqual(ed.required_properties, [])
+
+    def test_create_event_definition_with_null_required_properties(self):
+        response = self.client.post(
+            f"/api/projects/{self.team.pk}/event_definitions/",
+            {"name": "test_event_with_null_required_props", "required_properties": None},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.json()["required_properties"], None)
+        ed = EventDefinition.objects.get(name="test_event_with_null_required_props", team=self.team)
+        self.assertEqual(ed.required_properties, None)
+
+    def test_retrieve_event_definition_with_required_properties(self):
+        ed = EventDefinition.objects.create(
+            team=self.team, name="test_event_retrieve", required_properties=["foo", "bar"]
+        )
+        response = self.client.get(f"/api/projects/@current/event_definitions/{ed.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["required_properties"], ["foo", "bar"])
+
+    def test_update_event_definition_required_properties(self):
+        ed = EventDefinition.objects.create(team=self.team, name="test_event_update", required_properties=["foo"])
+        response = self.client.patch(
+            f"/api/projects/@current/event_definitions/{ed.id}/",
+            {"required_properties": ["bar", "baz"]},
+        )
+        # Should be forbidden for non-EE, but test the field is present in response
+        self.assertIn("required_properties", response.json())
+        # If you want to test EE, do it in the EE test file

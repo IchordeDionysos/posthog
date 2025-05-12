@@ -12,6 +12,7 @@ import {
     PropertyDefinition,
     PropertyFilterType,
     PropertyOperator,
+    PropertyType,
     SlackChannelType,
     SubscriptionType,
     TimeUnitType,
@@ -70,7 +71,8 @@ export const mockEventPropertyDefinition = {
     updated_at: '2022-01-24T21:32:38.359756Z',
     updated_by: null,
     is_seen_on_filtered_events: true,
-    property_type: undefined,
+    property_type: PropertyType.String,
+    property_type_enum: [],
 }
 
 export const mockEventPropertyDefinitions: PropertyDefinition[] = [

@@ -46,10 +46,16 @@ class EventDefinitionSerializer(TaggedItemSerializerMixin, serializers.ModelSeri
             "last_calculated_at",
             "created_by",
             "post_to_slack",
+            "required_properties",
         )
 
     def validate(self, data):
         validated_data = super().validate(data)
+
+        # Explicitly check for blank or missing name
+        name = validated_data.get("name")
+        if name is None or name.strip() == "":
+            raise serializers.ValidationError({"name": ["This field may not be blank."]})
 
         if "hidden" in validated_data and "verified" in validated_data:
             if validated_data["hidden"] and validated_data["verified"]:
@@ -69,6 +75,7 @@ class EventDefinitionViewSet(
     TaggedItemViewSetMixin,
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
     mixins.UpdateModelMixin,
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet,

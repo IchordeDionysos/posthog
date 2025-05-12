@@ -3450,6 +3450,7 @@ export interface EventDefinition {
     is_action?: boolean
     hidden?: boolean
     default_columns?: string[]
+    required_properties?: string[]
 }
 
 // TODO duplicated from plugin server. Follow-up to de-duplicate
@@ -3458,6 +3459,7 @@ export enum PropertyType {
     String = 'String',
     Numeric = 'Numeric',
     Boolean = 'Boolean',
+    Enum = 'Enum',
     Duration = 'Duration',
     Selector = 'Selector',
     Cohort = 'Cohort',
@@ -3493,6 +3495,7 @@ export interface PropertyDefinition {
     verified_at?: string
     verified_by?: string
     hidden?: boolean
+    property_type_enum?: string[] // Enum values for property_type === 'Enum'
 }
 
 export enum PropertyDefinitionState {

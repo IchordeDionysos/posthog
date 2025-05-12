@@ -1,5 +1,6 @@
 from typing import cast
 
+from posthog.models.event_definition import EventDefinition
 import posthoganalytics
 from django.utils import timezone
 from loginas.utils import is_impersonated_session
@@ -54,10 +55,10 @@ class EnterpriseEventDefinitionSerializer(TaggedItemSerializerMixin, serializers
             "created_by",
             "post_to_slack",
             "default_columns",
+            "required_properties",
         )
         read_only_fields = [
             "id",
-            "name",
             "created_at",
             "updated_at",
             "last_seen_at",
@@ -81,7 +82,49 @@ class EnterpriseEventDefinitionSerializer(TaggedItemSerializerMixin, serializers
 
         return validated_data
 
+    def validate_name(self, value):
+        # If updating and name is unchanged, skip duplicate check
+        if self.instance and self.instance.name == value:
+            return value
+        team_id = self.context["team_id"]
+        # Check both base and enterprise tables for duplicates
+        if (
+            EventDefinition.objects.filter(name=value, team_id=team_id).exists()
+            or EnterpriseEventDefinition.objects.filter(name=value, team_id=team_id).exists()
+        ):
+            raise serializers.ValidationError("There is already an event with this name.")
+        return value
+
+    def create(self, validated_data):
+        validated_data.pop("post_to_slack", None)
+        validated_data["team_id"] = self.context["team_id"]
+        instance = super().create(validated_data)
+        log_activity(
+            organization_id=None,
+            team_id=self.context["team_id"],
+            user=self.context["request"].user,
+            item_id=str(instance.id),
+            scope="EventDefinition",
+            activity="created",
+            was_impersonated=is_impersonated_session(self.context["request"]),
+            detail=Detail(name=str(instance.name)),
+        )
+        user = self.context["request"].user
+        posthoganalytics.capture(
+            user.distinct_id,
+            "event definition created",
+            {
+                "team_id": self.context["team_id"],
+                "event_definition_id": str(instance.id),
+                "name": instance.name,
+            },
+            groups=groups(user.organization),
+        )
+        return instance
+
     def update(self, event_definition: EnterpriseEventDefinition, validated_data):
+        # Prevent name from being updated
+        validated_data.pop("name", None)
         validated_data["updated_by"] = self.context["request"].user
 
         # If setting hidden=True, ensure verified becomes false

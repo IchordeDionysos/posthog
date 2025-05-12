@@ -282,6 +282,7 @@ const operatorMappingChoice: Record<keyof typeof PropertyType, Record<string, st
     String: stringOperatorMap,
     Numeric: numericOperatorMap,
     Boolean: booleanOperatorMap,
+    Enum: stringOperatorMap,
     Duration: durationOperatorMap,
     Selector: selectorOperatorMap,
     Cohort: cohortOperatorMap,

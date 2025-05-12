@@ -26,6 +26,8 @@ class EventDefinition(UUIDModel):
     # Volume of events in the last 30 rolling days (computed asynchronously)
     volume_30_day = models.IntegerField(default=None, null=True)
 
+    required_properties = models.JSONField(blank=True, default=list, null=True)
+
     class Meta:
         indexes = [
             # Index on project_id foreign key

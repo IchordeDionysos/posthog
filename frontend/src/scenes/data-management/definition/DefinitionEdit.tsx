@@ -1,4 +1,4 @@
-import { LemonSkeleton, LemonTag } from '@posthog/lemon-ui'
+import { LemonInputSelect, LemonSkeleton, LemonTag } from '@posthog/lemon-ui'
 import { useActions, useValues } from 'kea'
 import { Form } from 'kea-forms'
 import { PropertyStatusControl } from 'lib/components/DefinitionPopover/DefinitionPopoverContents'
@@ -139,13 +139,34 @@ export function DefinitionEdit(props: DefinitionLogicProps = {}): JSX.Element {
                                 {({ value, onChange }) => (
                                     <LemonSelect
                                         onChange={(val) => onChange(val)}
-                                        value={value as 'DateTime' | 'String' | 'Numeric' | 'Boolean'}
+                                        value={value as 'DateTime' | 'String' | 'Numeric' | 'Boolean' | 'Enum'}
                                         options={[
                                             { value: 'DateTime', label: 'DateTime' },
                                             { value: 'String', label: 'String' },
                                             { value: 'Numeric', label: 'Numeric' },
                                             { value: 'Boolean', label: 'Boolean' },
+                                            { value: 'Enum', label: 'Enum' },
                                         ]}
+                                    />
+                                )}
+                            </LemonField>
+                        </div>
+                    )}
+
+                    {isProperty && 'property_type' in editDefinition && editDefinition.property_type === 'Enum' && (
+                        <div className="ph-ignore-input">
+                            <LemonField
+                                name="property_type_enum"
+                                label="Enum values"
+                                data-attr="property-type-enum-values"
+                            >
+                                {({ value, onChange }) => (
+                                    <LemonInputSelect
+                                        value={value as string[]}
+                                        onChange={(val) => onChange(val)}
+                                        className="w-140"
+                                        mode="multiple"
+                                        allowCustomValues={true}
                                     />
                                 )}
                             </LemonField>
